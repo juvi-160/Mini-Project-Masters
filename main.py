@@ -22,8 +22,9 @@ def web_search_tool(query: str) -> str:
 
 # ---- LLM config: local Ollama model, no API key needed ----
 llm = LLM(
-    model="ollama/llama3.2",
-    base_url="http://localhost:11434"
+    model="ollama/llama3.2:1b",
+    base_url="http://localhost:11434",
+    max_tokens=400
 )
 
 # ---- Agents ----

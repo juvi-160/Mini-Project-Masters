@@ -25,7 +25,7 @@ def web_search_tool(query: str) -> str:
 
 @st.cache_resource
 def get_crew():
-    llm = LLM(model="ollama/llama3.2", base_url="http://localhost:11434")
+    llm = LLM(model="ollama/llama3.2:1b", base_url="http://localhost:11434", max_tokens=400)
 
     researcher = Agent(
         role="Research Specialist",
