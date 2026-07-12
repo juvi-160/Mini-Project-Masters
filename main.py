@@ -1,31 +1,23 @@
-import os
-os.environ["OPENAI_API_KEY"] = "NA"  # prevents CrewAI from trying to reach OpenAI in the background
-
-import yfinance as yf
+from ddgs import DDGS
 from crewai import Agent, Task, Crew, Process, LLM
 from crewai.tools import tool
 
 
-# ---- Custom tool: fetches stock data using yfinance ----
-@tool("Stock Price Tool")
-def stock_price_tool(ticker: str) -> str:
-    """Fetches recent stock price data and basic info for a given ticker symbol (e.g. AAPL, TSLA, MSFT)."""
-    stock = yf.Ticker(ticker)
-    hist = stock.history(period="5d")
-    if hist.empty:
-        return f"No data found for ticker {ticker}. Please check the symbol."
-    latest = hist.iloc[-1]
-    info = stock.info
-    summary = (
-        f"Ticker: {ticker}\n"
-        f"Company: {info.get('longName', 'N/A')}\n"
-        f"Latest Close Price: {latest['Close']:.2f}\n"
-        f"5-Day High: {hist['High'].max():.2f}\n"
-        f"5-Day Low: {hist['Low'].min():.2f}\n"
-        f"Volume: {latest['Volume']}\n"
-        f"Sector: {info.get('sector', 'N/A')}\n"
-    )
-    return summary
+# ---- Custom tool: free web search using DuckDuckGo, works for ANY topic ----
+@tool("Web Search Tool")
+def web_search_tool(query: str) -> str:
+    """Searches the web for a given query/topic and returns a summary of top results.
+    Use this to research any topic - news, facts, concepts, current events, etc."""
+    try:
+        results = DDGS().text(query, max_results=5)
+        if not results:
+            return f"No results found for '{query}'."
+        formatted = f"Search results for '{query}':\n\n"
+        for i, r in enumerate(results, 1):
+            formatted += f"{i}. {r.get('title', 'No title')}\n{r.get('body', 'No description')}\nSource: {r.get('href', '')}\n\n"
+        return formatted
+    except Exception as e:
+        return f"Search failed: {str(e)}"
 
 
 # ---- LLM config: local Ollama model, no API key needed ----
@@ -36,52 +28,51 @@ llm = LLM(
 
 # ---- Agents ----
 researcher = Agent(
-    role="Financial Researcher",
-    goal="Gather accurate, up-to-date stock data for the given company ticker: {ticker}",
-    backstory="You are a meticulous financial researcher who specializes in pulling "
-              "real-time stock data and summarizing key metrics clearly.",
-    tools=[stock_price_tool],
+    role="Research Specialist",
+    goal="Gather accurate, relevant information about the given topic: {topic}",
+    backstory="You are a meticulous researcher who searches the web and pulls together "
+              "the most relevant facts and information on any topic, clearly and objectively.",
+    tools=[web_search_tool],
     llm=llm,
     verbose=True,
 )
 
-analyst = Agent(
-    role="Investment Analyst",
-    goal="Analyze the stock data provided and produce a short, clear investment briefing",
-    backstory="You are an experienced investment analyst who turns raw financial data "
-              "into concise, actionable insights for everyday investors.",
+writer = Agent(
+    role="Content Writer",
+    goal="Turn research findings into a clear, well-organized summary report",
+    backstory="You are a skilled writer who transforms raw research into concise, "
+              "easy-to-read summaries for a general audience.",
     llm=llm,
     verbose=True,
 )
 
 # ---- Tasks ----
 research_task = Task(
-    description="Fetch the latest stock data for ticker {ticker} using the Stock Price Tool. "
-                "Report the key numbers clearly.",
-    expected_output="A structured summary of the stock's latest price, 5-day high/low, volume, and sector.",
+    description="Search the web for information about the topic: {topic}. "
+                "Gather the most relevant and important facts, using the Web Search Tool.",
+    expected_output="A structured collection of key facts and information about the topic.",
     agent=researcher,
 )
 
-analysis_task = Task(
-    description="Using the research findings, write a short investment briefing (50-100 words) "
-                "about {ticker}. Mention whether the stock shows short-term strength or weakness "
-                "based on the 2-day range, and note any risks in reading too much into 2 days of data.",
-    expected_output="A concise, well-written investment briefing in plain English.",
-    agent=analyst,
+writing_task = Task(
+    description="Using the research findings, write a clear, well-organized summary report "
+                "(200-250 words) about {topic}. Structure it with a brief intro, key points, "
+                "and a short conclusion.",
+    expected_output="A polished, easy-to-read summary report in plain English.",
+    agent=writer,
     context=[research_task],
 )
 
 # ---- Crew ----
 crew = Crew(
-    agents=[researcher, analyst],
-    tasks=[research_task, analysis_task],
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
     process=Process.sequential,
     verbose=True,
-    memory=False,
 )
 
 if __name__ == "__main__":
-    ticker = input("Enter a stock ticker (e.g. AAPL, TSLA, MSFT): ").strip().upper()
-    result = crew.kickoff(inputs={"ticker": ticker})
-    print("\n\n===== FINAL BRIEFING =====\n")
+    topic = input("Enter any topic to research (e.g. 'climate change', 'AI in healthcare'): ").strip()
+    result = crew.kickoff(inputs={"topic": topic})
+    print("\n\n===== FINAL REPORT =====\n")
     print(result.raw)
