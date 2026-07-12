@@ -1,3 +1,6 @@
+import os
+os.environ["OPENAI_API_KEY"] = "NA"  # prevents CrewAI from trying to reach OpenAI in the background
+
 import yfinance as yf
 from crewai import Agent, Task, Crew, Process, LLM
 from crewai.tools import tool
@@ -60,9 +63,9 @@ research_task = Task(
 )
 
 analysis_task = Task(
-    description="Using the research findings, write a short investment briefing (150-200 words) "
+    description="Using the research findings, write a short investment briefing (50-100 words) "
                 "about {ticker}. Mention whether the stock shows short-term strength or weakness "
-                "based on the 5-day range, and note any risks in reading too much into 5 days of data.",
+                "based on the 2-day range, and note any risks in reading too much into 2 days of data.",
     expected_output="A concise, well-written investment briefing in plain English.",
     agent=analyst,
     context=[research_task],
@@ -74,6 +77,7 @@ crew = Crew(
     tasks=[research_task, analysis_task],
     process=Process.sequential,
     verbose=True,
+    memory=False,
 )
 
 if __name__ == "__main__":
