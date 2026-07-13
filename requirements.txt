@@ -1,0 +1,8 @@
+streamlit
+crewai
+crewai-tools
+ddgs
+fpdf2
+requests
+matplotlib
+python-dotenv
