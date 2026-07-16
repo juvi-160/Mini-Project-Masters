@@ -1,6 +1,8 @@
 from ddgs import DDGS
 from crewai import Agent, Task, Crew, Process, LLM
 from crewai.tools import tool
+from dotenv import load_dotenv
+load_dotenv()  # Load environment variables from .env file
 
 
 # ---- Custom tool: free web search using DuckDuckGo, works for ANY topic ----
@@ -22,9 +24,8 @@ def web_search_tool(query: str) -> str:
 
 # ---- LLM config: local Ollama model, no API key needed ----
 llm = LLM(
-    model="ollama/llama3.2:1b",
-    base_url="http://localhost:11434",
-    max_tokens=400
+    model="groq/llama-3.3-70b-versatile",
+    max_tokens=max(300, int(word_count * 1.8))
 )
 
 # ---- Agents ----
