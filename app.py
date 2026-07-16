@@ -9,6 +9,16 @@ import re
 from collections import Counter
 import matplotlib.pyplot as plt
 
+import os
+import streamlit as st
+
+if "GROQ_API_KEY" not in os.environ:
+    try:
+        if "GROQ_API_KEY" in st.secrets:
+            os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
+    except Exception:
+        pass   
+
 st.set_page_config(page_title="VeriCrew", page_icon=":material/travel_explore:", layout="centered")
 
 CUSTOM_CSS = """
